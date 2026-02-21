@@ -217,12 +217,57 @@ const Audio = (() => {
     }
   };
 
+  // Low tone — deep atmospheric hum/drone
+  const tone = (freq = 80, dur = 0.6, vol = 0.15, type = 'sine') => {
+    init(); if (!ctx) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0, ctx.currentTime);
+    g.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.05);
+    g.gain.linearRampToValueAtTime(vol * 0.6, ctx.currentTime + dur * 0.5);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 400;
+    o.connect(lp); lp.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + dur);
+  };
+
+  // Two-tone deep hit — ominous interval
+  const deepHit = (freq1, freq2, dur = 0.8, vol = 0.18) => {
+    tone(freq1, dur, vol, 'sine');
+    setTimeout(() => tone(freq2, dur * 0.7, vol * 0.8, 'triangle'), 80);
+  };
+
+  // Rising low drone — tension builder
+  const riseDrone = (dur = 2, vol = 0.12) => {
+    init(); if (!ctx) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(40, ctx.currentTime);
+    o.frequency.linearRampToValueAtTime(120, ctx.currentTime + dur);
+    g.gain.setValueAtTime(0, ctx.currentTime);
+    g.gain.linearRampToValueAtTime(vol, ctx.currentTime + dur * 0.3);
+    g.gain.linearRampToValueAtTime(vol * 0.5, ctx.currentTime + dur * 0.8);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 300;
+    o.connect(lp); lp.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + dur);
+  };
+
   return {
     keyClick: () => noise(rand(15,30) / 1000, rand(8,15) / 100, rand(800, 2500)),
     alert: () => glitchBurst(4, 0.2),
     warn: () => glitchBurst(6, 0.25),
     success: () => { noise(0.04, 0.18, 600); setTimeout(() => noise(0.06, 0.15, 900), 60); },
     boot: () => noise(rand(20,40) / 1000, 0.12, rand(400, 1500)),
+    // Event sounds — low & atmospheric
+    fullscreenAlert: () => deepHit(55, 82, 1.2, 0.2),
+    warnAlert: () => deepHit(65, 45, 1.0, 0.22),
+    notifPop: () => { tone(110, 0.3, 0.12, 'triangle'); noise(0.02, 0.1, 600); },
+    matrixDrone: () => riseDrone(3, 0.15),
+    progressHum: () => riseDrone(1.5, 0.1),
+    eventDone: () => deepHit(82, 110, 0.5, 0.14),
   };
 })();
 
@@ -1101,81 +1146,92 @@ let lastDrama = 0;
 const dramaticEvents = [
   () => {
     glitchScreen();
-    Audio.warn();
+    Audio.warnAlert();
     showAlert('\u26A0 TRACE DETECTED', 'DEPLOYING COUNTERMEASURES...', 'var(--red)', 3000);
     addEvent('Trace detected from ' + ip(), 'crit');
     setTimeout(() => {
       showNotif('COUNTERMEASURES DEPLOYED', '');
       addEvent('Trace neutralized', 'success');
-      Audio.success();
+      Audio.eventDone();
     }, 3200);
   },
   () => {
     showProgress('DECRYPTING RSA-4096 KEY...', 4000);
-    Audio.alert();
+    Audio.progressHum();
     addEvent('RSA decryption initiated', '');
     setTimeout(() => {
+      Audio.notifPop();
       showNotif('ENCRYPTION BYPASSED', '');
       addEvent('RSA-4096 key extracted', 'success');
-      Audio.success();
+      Audio.eventDone();
     }, 4200);
   },
   () => {
     matrixRain.start(3500);
+    Audio.matrixDrone();
     showNotif('MATRIX OVERFLOW DETECTED', 'warn');
     addEvent('Memory overflow in sector ' + hex(4), 'warn');
   },
   () => {
     showProgress('BREACHING FIREWALL...', 3500);
-    Audio.alert();
+    Audio.progressHum();
     addEvent('Firewall breach in progress', 'warn');
     setTimeout(() => {
+      Audio.notifPop();
       showNotif('FIREWALL BREACHED', '');
       addEvent('Firewall rule ' + rand(1,9999) + ' bypassed', 'success');
-      Audio.success();
+      Audio.eventDone();
     }, 3800);
   },
   () => {
     showProgress('DOWNLOADING classified_' + hex(4) + '.db', 5000);
+    Audio.progressHum();
     addEvent('Exfiltrating database ' + rand(1,500) + 'MB', '');
     setTimeout(() => {
+      Audio.notifPop();
       showNotif('DOWNLOAD COMPLETE', '');
       addEvent('File saved to /tmp/.' + hex(8), 'success');
+      Audio.eventDone();
     }, 5200);
   },
   () => {
     glitchScreen();
+    Audio.fullscreenAlert();
     showAlert('ACCESS GRANTED', 'ROOT PRIVILEGES OBTAINED', 'var(--g)', 3000);
-    Audio.success();
     addEvent('Root shell opened on ' + ip(), 'success');
   },
   () => {
+    Audio.notifPop();
     showNotif('SATELLITE UPLINK ESTABLISHED', '');
-    Audio.alert();
     addEvent('Satellite ' + pick(['NOAA-19','ISS','GPS-IIF','GOES-16']) + ' linked', 'success');
     connections.update();
   },
   () => {
     showProgress('INJECTING POLYMORPHIC PAYLOAD...', 3000);
+    Audio.progressHum();
     addEvent('Payload morphing: ' + rand(5,15) + ' layers', '');
     setTimeout(() => {
+      Audio.notifPop();
       showNotif('PAYLOAD DEPLOYED', '');
       addEvent('AV evasion: 0/' + rand(65,72) + ' detections', 'success');
-      Audio.success();
+      Audio.eventDone();
     }, 3200);
   },
   () => {
     glitchScreen();
+    Audio.fullscreenAlert();
     showAlert('QUANTUM TUNNEL ACTIVE', 'LATENCY: ' + rand(1,15) + 'ms', 'var(--gc)', 2500);
     addEvent('Quantum channel: ' + ip() + ' <-> ' + ip(), 'success');
   },
   () => {
+    Audio.warnAlert();
     showNotif('NEURAL NETWORK BREACHED', 'warn');
-    Audio.warn();
     addEvent('AI defense system compromised', 'warn');
     setTimeout(() => {
       addEvent('Neural firewall disabled', 'success');
+      Audio.notifPop();
       showNotif('AI DEFENSES NEUTRALIZED', '');
+      Audio.eventDone();
     }, 2000);
   },
 ];
