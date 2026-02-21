@@ -189,21 +189,37 @@ const pct = () => rand(1,99) + '%';
 const Audio = (() => {
   let ctx;
   const init = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); };
-  const beep = (freq = 800, dur = 0.04, vol = 0.06, type = 'square') => {
+
+  // Short burst of noise — mechanical click/tap sound
+  const noise = (dur = 0.015, vol = 0.04, hp = 1000) => {
     init(); if (!ctx) return;
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = type; o.frequency.value = freq;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain();
     g.gain.setValueAtTime(vol, ctx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    o.connect(g); g.connect(ctx.destination);
-    o.start(); o.stop(ctx.currentTime + dur);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'highpass'; filter.frequency.value = hp;
+    src.connect(filter); filter.connect(g); g.connect(ctx.destination);
+    src.start(); src.stop(ctx.currentTime + dur);
   };
+
+  // Glitchy digital crackle — rapid filtered noise bursts
+  const glitchBurst = (count = 3, vol = 0.06) => {
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => noise(rand(8,20) / 1000, vol, rand(800, 4000)), i * rand(30, 60));
+    }
+  };
+
   return {
-    keyClick: () => beep(rand(600,1200), 0.02, 0.03, 'square'),
-    alert: () => { beep(400,.08,.1); setTimeout(()=>beep(800,.08,.1),100); },
-    warn: () => { beep(800,.1,.12); setTimeout(()=>beep(300,.15,.12),120); },
-    success: () => { beep(523,.08,.08); setTimeout(()=>beep(659,.08,.08),80); setTimeout(()=>beep(784,.12,.08),160); },
-    boot: (i) => beep(200 + i * 80, 0.06, 0.05),
+    keyClick: () => noise(rand(8,18) / 1000, rand(2,4) / 100, rand(2000, 6000)),
+    alert: () => glitchBurst(4, 0.07),
+    warn: () => glitchBurst(6, 0.09),
+    success: () => { noise(0.03, 0.06, 800); setTimeout(() => noise(0.05, 0.05, 1200), 50); },
+    boot: () => noise(rand(10,25) / 1000, 0.04, rand(500, 3000)),
   };
 })();
 
