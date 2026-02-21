@@ -129,6 +129,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--g);font-f
       <div class="stat-item">NET <div class="stat-bar"><div class="stat-fill" id="net-bar" style="width:12%"></div></div><span id="net-val">12%</span></div>
     </div>
     <div id="clock">00:00:00</div>
+    <div id="fs-toggle" title="Toggle fullscreen" style="cursor:pointer;padding:2px 8px;border:1px solid var(--gg);font-size:10px;letter-spacing:1px;color:var(--gd);transition:color .2s,border-color .2s" onmouseenter="this.style.color='var(--g)';this.style.borderColor='var(--g)'" onmouseleave="this.style.color='var(--gd)';this.style.borderColor='var(--gg)'">[  ]</div>
   </div>
 
   <div id="left-panel" class="panel">
@@ -1293,15 +1294,15 @@ async function bootSequence() {
     for (let j = 0; j < line.length; j++) {
       text += line[j];
       bootEl.textContent = text;
-      await sleep(rand(5, 15));
+      await sleep(rand(1, 5));
     }
     text += '\n';
     bootEl.textContent = text;
     Audio.boot(i);
-    await sleep(rand(80, 250));
+    await sleep(rand(30, 80));
   }
 
-  await sleep(1200);
+  await sleep(400);
 
   // Show "press any key" prompt — needed for fullscreen user gesture
   const prompt = document.createElement('div');
@@ -1349,6 +1350,18 @@ async function init() {
   setInterval(ambientEvent, 3000);
   setInterval(() => connections.update(), 5000);
   setInterval(() => fileTree.cycle(), 7000);
+
+  // Fullscreen toggle
+  $('#fs-toggle').addEventListener('click', () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    $('#fs-toggle').textContent = document.fullscreenElement ? '[><]' : '[  ]';
+  });
 
   // Boot sequence
   await bootSequence();
