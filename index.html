@@ -188,7 +188,10 @@ const pct = () => rand(1,99) + '%';
 // ─── AUDIO ENGINE ──────────────────────────────────────
 const Audio = (() => {
   let ctx;
-  const init = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); };
+  const init = () => {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+  };
 
   // Short burst of noise — mechanical click/tap sound
   const noise = (dur = 0.015, vol = 0.04, hp = 1000) => {
