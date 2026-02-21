@@ -194,9 +194,9 @@ const Audio = (() => {
   };
 
   // Short burst of noise — mechanical click/tap sound
-  const noise = (dur = 0.015, vol = 0.04, hp = 1000) => {
+  const noise = (dur = 0.03, vol = 0.15, hp = 800) => {
     init(); if (!ctx) return;
-    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
     const src = ctx.createBufferSource();
@@ -207,22 +207,22 @@ const Audio = (() => {
     const filter = ctx.createBiquadFilter();
     filter.type = 'highpass'; filter.frequency.value = hp;
     src.connect(filter); filter.connect(g); g.connect(ctx.destination);
-    src.start(); src.stop(ctx.currentTime + dur);
+    src.start(); src.stop(ctx.currentTime + dur + 0.01);
   };
 
   // Glitchy digital crackle — rapid filtered noise bursts
-  const glitchBurst = (count = 3, vol = 0.06) => {
+  const glitchBurst = (count = 3, vol = 0.2) => {
     for (let i = 0; i < count; i++) {
-      setTimeout(() => noise(rand(8,20) / 1000, vol, rand(800, 4000)), i * rand(30, 60));
+      setTimeout(() => noise(rand(20,40) / 1000, vol, rand(600, 2000)), i * rand(30, 70));
     }
   };
 
   return {
-    keyClick: () => noise(rand(8,18) / 1000, rand(2,4) / 100, rand(2000, 6000)),
-    alert: () => glitchBurst(4, 0.07),
-    warn: () => glitchBurst(6, 0.09),
-    success: () => { noise(0.03, 0.06, 800); setTimeout(() => noise(0.05, 0.05, 1200), 50); },
-    boot: () => noise(rand(10,25) / 1000, 0.04, rand(500, 3000)),
+    keyClick: () => noise(rand(15,30) / 1000, rand(8,15) / 100, rand(800, 2500)),
+    alert: () => glitchBurst(4, 0.2),
+    warn: () => glitchBurst(6, 0.25),
+    success: () => { noise(0.04, 0.18, 600); setTimeout(() => noise(0.06, 0.15, 900), 60); },
+    boot: () => noise(rand(20,40) / 1000, 0.12, rand(400, 1500)),
   };
 })();
 
