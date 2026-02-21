@@ -1227,6 +1227,29 @@ async function bootSequence() {
   }
 
   await sleep(1200);
+
+  // Show "press any key" prompt — needed for fullscreen user gesture
+  const prompt = document.createElement('div');
+  prompt.textContent = '> PRESS ANY KEY TO BEGIN INFILTRATION';
+  prompt.style.cssText = 'margin-top:20px;animation:blink 1s step-end infinite;color:var(--gc);text-shadow:0 0 8px var(--gc)';
+  bootEl.parentElement.appendChild(prompt);
+
+  // Wait for user gesture, then go fullscreen and dismiss boot
+  await new Promise(resolve => {
+    function go() {
+      document.removeEventListener('keydown', go);
+      document.removeEventListener('click', go);
+      document.removeEventListener('touchstart', go);
+      const el = document.documentElement;
+      const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+      if (rfs) rfs.call(el).catch(() => {});
+      resolve();
+    }
+    document.addEventListener('keydown', go, { once: false });
+    document.addEventListener('click', go, { once: false });
+    document.addEventListener('touchstart', go, { once: false });
+  });
+
   $('#boot').classList.add('done');
   setTimeout(() => { $('#boot').style.display = 'none'; }, 800);
 }
@@ -1257,8 +1280,8 @@ async function init() {
 
   // Listen for keyboard input
   document.addEventListener('keydown', (e) => {
-    // Allow F11 for fullscreen and F12 for devtools
-    if (e.key === 'F11' || e.key === 'F12') return;
+    // Allow F11 for fullscreen and F12 for devtools, Escape to exit
+    if (e.key === 'F11' || e.key === 'F12' || e.key === 'Escape') return;
     onKey(e);
   });
 
